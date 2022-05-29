@@ -9,6 +9,7 @@ import Filter from "./components/filters/filter";
 import LoginHome from "./components/LoginHome/LoginHome";
 import Profile from "./components/Profile/profile";
 import Project from "./components/editproject/EditProject"
+import EditProfile from "./components/Profile/editprofile";
 
 function App() {
   return (
@@ -21,6 +22,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/LoginHome" element={<LoginHome />} />
         <Route path="/Profile" element={<Profile />} />
+       
+        <Route path="/editprofile" element={<EditProfile />} />
         <Route path="/editproject" element={<Project />} />
         
         {/* <Route path="/" element={<Filter/>} /> */}

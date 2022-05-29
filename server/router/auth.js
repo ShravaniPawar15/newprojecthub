@@ -10,6 +10,7 @@ router.use(bodyParser.urlencoded({ extended: true }));
 const User = require('../models/userSchema');
 const Filedb =  require('../models/fileSchema');
 const bcrypt = require('bcryptjs');
+const authenticate = require("../middleware/authenticate");
 
 const multer = require('multer');
 
@@ -18,6 +19,7 @@ const upload = require("../common");
 const Upload = require("../upload");
 const path = require('path');
 const fs = require('fs');
+const { Navigate } = require('react-router-dom');
 //AWS CONFIGURATIONS
 
 // const { uploadFile } = require("../s3");
@@ -99,8 +101,47 @@ router.get('/', (req, res) => {
 
 // Single file Upload - image key should be passed postman
 
+router.get('/LoginHome', authenticate, (req, res) => {
+  console.log("login succesfully .... this is home page ");
+  res.send(req.rootUser);
+});
+router.post('/editprofile', authenticate, (req, res) => {
+  console.log("editprofile ");
+  User.findById(req.user.id, function(err, user) {
+
+      // todo: don't forget to handle err
+
+      if (!user) {
+          req.flash('error', 'No account found');
+          return res.redirect('/editprofile');
+      }
+
+      // good idea to trim 
+      var name = req.body.name.trim();
+      var email = req.body.email.trim();
+      var username = req.body.username.trim();
 
 
+      // validate 
+      if (!email || !username || !name) { // simplified: '' is a falsey
+          req.flash('error', 'One or more fields are empty');
+          return res.redirect('/editprofile'); // modified
+      }
+
+      // no need for else since you are returning early ^
+      user.email = email;
+      user.name = name;
+      user.username = username;
+
+      // don't forget to save!
+      user.save(function(err) {
+
+          // todo: don't forget to handle err
+
+          Navigate('/profile');
+      });
+  });
+});
 router.post("/single", upload.single("image"),async (req, res, next) => {
   console.log(req.file);  // UPLOADED FILE DESCRIPTION RECEIVED
 
@@ -142,88 +183,99 @@ router.post("/multiple", upload.array("images"), (req, res) => {
 
 
 router.post('/register', async(req, res) => {
-    console.log(req.body);
-    console.log("hii")
+  console.log(req.body);
 
-    const name = req.body.name;
-    const username = req.body.username;
-    const email = req.body.email;
-    const phone = req.body.phone;
-    const college = req.body.college;
-    const password = req.body.password;
-    const cpassword = req.body.cpassword;
+  const name = req.body.name;
+  const username = req.body.username;
+  const email = req.body.email;
+  const phone = req.body.phone;
+  const college = req.body.college;
+  const password = req.body.password;
+  const cpassword = req.body.cpassword;
 
-    if (!name || !username || !email || !phone || !college || !password || !cpassword) {
-        console.log("Wrong ");
-        return res.json({ error: "plz fill the details properly :" })
-    }
-    console.log(username);
-    try {
-        const user = await User.findOne({ email: email });
-        if (user) {
-            console.log("user found\n");
-            return res.status(422).json({ error: "email already exist" });
-        } else {
-            console.log("NOT FOUND");
-        }
+  if (!name || !username || !email || !phone || !college || !password || !cpassword) {
+      console.log("Wrong ");
+      return res.json({ error: "plz fill the details properly :" })
+  }
+  console.log(username);
+  try {
+      const user = await User.findOne({ email: email });
+      if (user) {
+          console.log("user found\n");
+          return res.status(422).json({ error: "email already exist" });
+      } else {
+          console.log("NOT FOUND");
+      }
 
-        const userD = new User({ name: name, username: username, email: email, phone: phone, college: college, password: password, cpassword: cpassword });
-        const success = await userD.save();
-        if (success) {
-            console.log("Successssss");
-            return res.status(201).json({ message: "user registred" });
-        } else {
-            return res.status(422).json({ message: "Error occured" });
-        }
-    } catch (err) {
-        console.log(err);
-    }
+      const userD = new User({ name: name, username: username, email: email, phone: phone, college: college, password: password, cpassword: cpassword });
+      const success = await userD.save();
+      if (success) {
+          console.log("Successssss");
+          return res.status(201).json({ message: "user registred" });
+      } else {
+          return res.status(422).json({ message: "Error occured" });
+      }
+  } catch (err) {
+      console.log(err);
+  }
 });
+
+
 
 
 
 //login route
 
-router.post('/login', async(req, res) => {
-    console.log(req.body);
-    let token;
-    try {
-        const { email, password } = req.body;
-
-        if (!email || !password) {
-            return res.status(400).json({ error: "please fill the required data.." });
-        }
-
-        const userLogin = await User.findOne({ email: email });
-
-        if (userLogin) {
-            const isMatch = await bcrypt.compare(password, userLogin.password);
-
-            token = await userLogin.generateAuthToken();
-            console.log(token);
-            res.cookie("jwtoken", token, {
-                expires: new Date(Date.now() + 275489859),
-                httpOnly: true
-            });
-
-
-            if (!isMatch) {
-                res.status(400).json({ error: "user error" });
-            } else {
-                res.json({ message: "user signin successfully.." });
-            }
-        } else {
-            res.status(400).json({ error: "invalid credential" });
-        }
-
-
-    } catch (err) {
-        console.log(err);
-    
-
-    }
-
+//login route
+router.get('/islogedin', authenticate, async(req, res) => {
+  res.status(266).json({ message: "User Loged In" });
 });
+
+
+//login route
+router.post('/login', async(req, res) => {
+  console.log(req.body);
+  console.log("inside login route....");
+  let token;
+  try {
+      // const { username, password } = req.body;
+      console.log("inside block");
+      if (!req.body.username || !req.body.password) {
+          console.log("inside login route if block");
+          return res.status(400).json({ error: "please fill the required data.." });
+
+      }
+
+      // const userLogin = await User.findOne({ username: email });
+      const userLogin = await User.findOne({ username: req.body.username });
+
+      if (userLogin) {
+          const isMatch = await bcrypt.compare(req.body.password, userLogin.password);
+          console.log(isMatch);
+          token = await userLogin.generateAuthToken();
+          console.log(token);
+          res.cookie("jwtoken", token, {
+              expires: new Date(Date.now() + 275489859),
+              httpOnly: true
+          });
+          if (!isMatch) {
+              res.status(400).json({ error: "user error" });
+              console.log("user error");
+          } else {
+              console.log("user login successfully");
+              res.json({ message: "user signin successfully.." });
+          }
+      } else {
+          res.status(400).json({ error: "invalid credential" });
+          console.log("invalid credentials      ...................    user not found");
+      }
+
+  } catch (err) {
+      console.log(err);
+  }
+
+})
+
  
 //Form route
 router.post("/addinformation",upload.single("files"),async(req, res) => {
