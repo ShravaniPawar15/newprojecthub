@@ -18,18 +18,20 @@ const fileSchema = new mongoose.Schema({
         required: true,
     },
     academicYear:{
-        type: Number,
+        type: String,
         required: true,
     },
     files:{
         type: String,
-        // required: true,
     },
     guideName:{
         type: String,
         required: true,
     },
-   
+    userID:{
+        type: String,
+        required: true,
+    },
 });
 
 const File = mongoose.model('FILE', fileSchema);

@@ -11,6 +11,9 @@ import ReactDOM from 'react-dom/client';
 import { useNavigate } from "react-router-dom";
 import makeAnimated from 'react-select/animated';
 import Select from 'react-select';
+import { saveAs } from 'file-saver';
+
+
 const animatedComponents = makeAnimated();
 const Countries = [
   { label: "C", value: 355  },
@@ -67,15 +70,18 @@ function MyForm() {
   //   };
   const postData = async (e) => {
     e.preventDefault();
-
+    console.log("HIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII");
     const formdata = new FormData();
-    formdata.append("file", File);
+    formdata.append("files", File);
     formdata.append("title", Title);
     formdata.append("department", Dept);
     formdata.append("domain", Domain);
     formdata.append("lang", Language);
     formdata.append("academicYear", Year);
     formdata.append("guideName", Guide);
+
+    console.log(formdata);
+
     console.log("this is postdata mthod");
 
       //   const filedata  = {
@@ -90,23 +96,21 @@ function MyForm() {
         console.log(formdata);
 
 
-        const res = await fetch("/addinformation", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: formdata,
-        });
+        const res = axios.post('/addinformation',
+         
+          formdata,
+        
+        );
 
-    const data = await res.json();
-    console.log("data:" + JSON.stringify(data));
-    if (data.status === 422 || !data) {
-      window.alert("invalid data");
-    } else {
-      window.alert("uploaded");
+    // const data = await res.json();
+    // console.log("data:" + JSON.stringify(data));
+    // if (data.status === 422 || !data) {
+    //   window.alert("invalid data");
+    // } else {
+    //   window.alert("uploaded");
 
-      navigate("/LoginHome");
-    }
+    //   navigate("/LoginHome");
+    // }
   };
 
   let minOffset = 0, maxOffset = 75;
@@ -117,27 +121,25 @@ function MyForm() {
   }
 
   const yearList = allYears.map((x) => { return (<option style={{ color: "#000000" }} key={x}>{x}</option>) });
-  // const handleChange = (event) => {
-  //   setMyCar(event.target.value)
+  const onChangeFile = (event) => {
+    const zip = require('jszip')();
+    let files = event.target.files;
+    for (let file = 0; file < event.target.files.length; file++) {
+      // Zip file with the file name.
+      zip.file(files[file].name, files[file]);
+    } 
+    zip.generateAsync({type: "blob"}).then(content=>{
+      // axios
+      // .post(url, content)
+      // .then( );
 
-  // const res = await fetch("/register", {
-  //   method: "POST",
-  //   headers: {
-  //     "Content-Type": "application/json",
-  //   },
-  //   body: JSON.stringify({
-  //     name,
-  //     username,
-  //     email,
-  //     phone,
-  //     college,
-  //     password,
-  //     cpassword,
-  //   }),
-  // });
+      console.log("\n\n    HIIIIIIIIIIIIIII \n");
+      console.log(content);
+    });
+  }
+  
 
   return (
-
 
 
 
@@ -178,12 +180,12 @@ function MyForm() {
             <Form.Label>Department</Form.Label>
             <Form.Select onChange={(e) => setDept(e.target.value)} as={Col} aria-label="Default select example" style={{ "margin": "15px", color: "#000000" }} required>
               <option style={{ color: "#000000" }}>Select</option>
-              <option value="1" style={{ color: "#000000" }} >CSE</option>
-              <option value="2" style={{ color: "#000000" }}>IT</option>
-              <option value="3" style={{ color: "#000000" }} >Electronics</option>
-              <option value="3" style={{ color: "#000000" }} >Electrical</option>
-              <option value="3" style={{ color: "#000000" }} >Mechanical</option>
-              <option value="3" style={{ color: "#000000" }} >Civil</option>
+              <option value="CSE" style={{ color: "#000000" }} >CSE</option>
+              <option value="IT" style={{ color: "#000000" }}>IT</option>
+              <option value="Electronics" style={{ color: "#000000" }} >Electronics</option>
+              <option value="Electrical" style={{ color: "#000000" }} >Electrical</option>
+              <option value="Mechanical" style={{ color: "#000000" }} >Mechanical</option>
+              <option value="Civil" style={{ color: "#000000" }} >Civil</option>
 
             </Form.Select>
           </Row>
@@ -193,13 +195,13 @@ function MyForm() {
             <Form.Label>Domain</Form.Label>
             <Form.Select onChange={(e) => setDomain(e.target.value)} as={Col} aria-label="Default select example" style={{ "margin": "15px", color: "#000000" }} required>
               <option style={{ color: "#000000" }}>Select</option>
-              <option value="1" style={{ color: "#000000" }} >Web</option>
-              <option value="2" style={{ color: "#000000" }}>Android</option>
-              <option value="3" style={{ color: "#000000" }} >Blockchain</option>
+              <option value="Web" style={{ color: "#000000" }} >Web</option>
+              <option value="Android" style={{ color: "#000000" }}>Android</option>
+              <option value="Blockchain" style={{ color: "#000000" }} >Blockchain</option>
             </Form.Select>
           </Row>
           </Form.Group>
-
+          
           <Form.Group  controlId="name">
           <Row>
           <Form.Label style={{color:"#ffffff",marginTop:"15px",marginBottom:"20px"}}>Languages Used</Form.Label>
@@ -222,12 +224,8 @@ function MyForm() {
 
             </Form.Select>
           </Row>
-          </Form.Group>
-          <Form.Group controlId="formFileMultiple" className="mb-3" >
-            <Form.Label>Upload your files related to project</Form.Label>
-            <Form.Control onChange={(e) => setFile(e.target.files[0])} required type="file" multiple />
-          </Form.Group>
-
+          
+          
           {/* <Form.Group className="mb-3" controlId="exampleForm.ControlTextarea1" >
               <Form.Label>Colaborators</Form.Label>
               <Form.Control as="textarea" rows={1} />
@@ -237,9 +235,15 @@ function MyForm() {
             <Form.Label>Guide Name</Form.Label>
             <Form.Control onChange={(e) => setGuide(e.target.value)} as="textarea" required rows={1} />
           </Form.Group>
+          </Form.Group>
+          <Form.Group controlId="formFileMultiple" className="mb-3" >
+            <Form.Label>Upload your files related to project</Form.Label>
+            <Form.Control onChangeCapture={onChangeFile}
+             onChange={(e) => setFile(e.target.files[0])} 
+             required type="file" webkitdirectory="" multiple />
+          </Form.Group>
           <button type="submit" onClick={postData}>Upload</button>
         </form>
-
       </div>
     </>);
 }

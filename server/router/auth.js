@@ -12,12 +12,19 @@ const Filedb =  require('../models/fileSchema');
 const bcrypt = require('bcryptjs');
 const authenticate = require("../middleware/authenticate");
 
+const path = require('path');
+const crypto = require('crypto');
+const mongoose = require('mongoose');
 const multer = require('multer');
+const GridFsStorage = require('multer-gridfs-storage');
+const Grid = require('gridfs-stream');
+const methodOverride = require('method-override');
+
 
 const upload = require("../common");
 
 const Upload = require("../upload");
-const path = require('path');
+
 const fs = require('fs');
 const { Navigate } = require('react-router-dom');
 //AWS CONFIGURATIONS
@@ -142,10 +149,11 @@ router.post('/editprofile', authenticate, (req, res) => {
       });
   });
 });
+
 router.post("/single", upload.single("image"),async (req, res, next) => {
   console.log(req.file);  // UPLOADED FILE DESCRIPTION RECEIVED
 
-//   console.log(__dirname);
+  //   console.log(__dirname);
   try {
     const response = await drive.files.create({
       requestBody: {
@@ -278,31 +286,36 @@ router.post('/login', async(req, res) => {
 
  
 //Form route
-router.post("/addinformation",upload.single("files"),async(req, res) => {
-    // console.log(req.body);
-    console.log(req.file);
+router.post("/addinformation",upload.single("files"),authenticate,async(req, res) => {
+    // console.log(req.file);
+    console.log(req.body);
     let token;
     const Title = req.body.title;
     const Dept= req.body.department;
     const Domain = req.body.domain;
     const Language = req.body.lang;
     const academicYear =  req.body.academicYear;
+
+    const uId = req.userID;
+
+
+
     // const File;
     // const Year = req.body.year;
     const Guide= req.body.guideName;
 
     console.log(JSON.stringify(Title));
-console.log("add info route ");
+    console.log("add info route ");
     try{
     //  console.log(filedb);
 
      const response = await drive.files.create({
         requestBody: {
-          name: 'tmp.jpg', //This can be name of your choice
-          mimeType: 'image/jpg',
+          name: 'tmp', //This can be name of your choice
+          mimeType: 'application/zip',
         },
         media: {
-          mimeType: 'image/jpg',
+          mimeType: 'application/zip',
           body: fs.createReadStream(path.join(req.file.path)),
         },
       });
@@ -334,8 +347,16 @@ console.log("add info route ");
 
     const File = result.data.webViewLink;
     console.log(File);
-    const filedb  =  new Filedb({title:Title,department:Dept,files:File,domain:Domain,lang:Language,academicYear:academicYear,guideName:Guide});
-    
+    const filedb  =  new Filedb({title:Title,
+                                department:Dept,
+                                files:File,
+                                domain:Domain,
+                                lang:Language,
+                                academicYear:academicYear,
+                                guideName:Guide,
+                                userID:uId,
+                              });
+    console.log(filedb);
     const success = await filedb.save();
      if (success) {
          console.log("Successssss");
@@ -346,7 +367,6 @@ console.log("add info route ");
     }catch(err){
         console.log(err);
     }
-
 });
 
 router.post("/resumeUpload", Upload.single("pdf"),  async (req, res, next) => {
@@ -381,5 +401,84 @@ router.post("/resumeUpload", Upload.single("pdf"),  async (req, res, next) => {
     }
   });
 
+
+////////////////////    Fetch data Routes ////////////////////////////
+
+router.get("/myProjects",authenticate,async(req,res)=>{
+  const userID = req.userID;
+  try{
+    const data = await Filedb.find({userID:userID});
+    console.log(data);
+    if(data){
+      // res.status(201).json({message: "Success"});
+      res.send(data);
+    }
+  }
+  catch(err){
+    console.log(err);
+  }
+});
+
+router.get("/allProjects",authenticate,async(req,res)=>{
+  const userID = req.userID;
+  try{
+    const data = await Filedb.find();
+    console.log(data);
+    if(data){
+      // res.status(201).json({message: "Success"});
+      res.send(data);
+    }
+  }
+  catch(err){
+    console.log(err);
+  }
+});
+
+router.get("/searchBar",authenticate,async(req,res)=>{
+
+  try{
+    const data1 = await Filedb.find({
+      department: new RegExp(req.body.keyWord),
+    });
+    const data2 = await Filedb.find({
+      domain: new RegExp(req.body.keyWord),
+    });
+    const data3 = await Filedb.find({
+      lang: new RegExp(req.body.keyWord),
+    });
+
+    const data4 = await Filedb.find({academicYear: req.body.keyWord,});
+
+    let arr=[];
+    arr.push(data1);
+    arr.push(data2);
+    arr.push(data3);
+    arr.push(data4);
+
+    console.log(arr);
+    res.send(arr);
+  }
+  catch(err){
+    console.log(err);
+  }
+});
+
+router.get("/filter",authenticate,async(req,res)=>{
+  const dept = req.body.department;
+  const domain = req.body.domain;
+  const aYear = req.body.academicYear;
+  try{
+    const data = await Filedb.find({
+      department: new RegExp(dept),
+      domain: new RegExp(domain),
+      academicYear: new RegExp(aYear),
+    });
+
+    res.send(data);
+  }
+  catch(err){
+    console.log(err);
+  }
+});
 
 module.exports = router;
